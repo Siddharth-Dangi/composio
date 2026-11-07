@@ -25,6 +25,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
+import requests.compat
+import requests.sessions
+import urllib.request
 import urllib3.connection
 
 from composio.exceptions import BlockedInternalUrlError
@@ -88,6 +91,20 @@ def rebound_server() -> t.Iterator[_RecordingServer]:
     server.close()
 
 
+def _neutralize_inherited_proxies(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "requests.sessions.get_environ_proxies",
+        lambda url, no_proxy=None: {},
+    )
+    monkeypatch.setattr(
+        "requests.utils.get_environ_proxies",
+        lambda url, no_proxy=None: {},
+    )
+    monkeypatch.setattr("requests.utils.getproxies", lambda: {})
+    monkeypatch.setattr("requests.compat.getproxies", lambda: {})
+    monkeypatch.setattr("urllib.request.getproxies", lambda: {})
+
+
 @pytest.fixture
 def no_inherited_proxy(monkeypatch: pytest.MonkeyPatch) -> None:
     """Make ``_proxy_applies`` deterministic: no proxy, from env or system.
@@ -97,10 +114,7 @@ def no_inherited_proxy(monkeypatch: pytest.MonkeyPatch) -> None:
     request would dial the proxy's answer to the hostname instead of the
     validated address — failing these tests on machines that carry one.
     """
-    monkeypatch.setattr(
-        "requests.utils.get_environ_proxies",
-        lambda url: {},
-    )
+    _neutralize_inherited_proxies(monkeypatch)
 
 
 @pytest.fixture
@@ -274,3 +288,96 @@ def test_connect_falls_back_to_the_next_validated_address(
 
     assert response.content == b"public payload"
     assert len(validated_server.hits) == 1
+
+
+def test_no_inherited_proxy_neutralizes_system_and_registry_proxies(
+    no_inherited_proxy: None,
+) -> None:
+    """Neutralize both session and utils proxy lookups (issue #5249).
+
+    On Windows machines with registry-configured proxies (or macOS system proxies),
+    requests.utils.getproxies() reads system settings. Because requests.sessions
+    imports get_environ_proxies by name at module import time, patching only
+    requests.utils.get_environ_proxies leaves requests.sessions.get_environ_proxies
+    unpatched. Verify both entry points and getproxies return empty mappings.
+    """
+    assert requests.sessions.get_environ_proxies("http://example.com") == {}
+    assert (
+        requests.sessions.get_environ_proxies(
+            "http://example.com", no_proxy="example.com"
+        )
+        == {}
+    )
+    assert requests.utils.get_environ_proxies("http://example.com") == {}
+    assert (
+        requests.utils.get_environ_proxies(
+            "http://example.com", no_proxy="example.com"
+        )
+        == {}
+    )
+    assert requests.utils.getproxies() == {}  # type: ignore[attr-defined]
+    assert requests.compat.getproxies() == {}  # type: ignore[attr-defined]
+    assert urllib.request.getproxies() == {}
+
+
+def test_no_inherited_proxy_prevents_system_proxy_from_intercepting_fetch(
+    monkeypatch: pytest.MonkeyPatch,
+    validated_server: _RecordingServer,
+) -> None:
+    """Issue #5249: Regression test simulating Windows registry / system proxy.
+
+    When an inherited system/registry proxy is configured, requests must not dial
+    the unreachable proxy when no_inherited_proxy is active.
+    """
+    fake_proxy = {
+        "http": "http://127.0.0.1:51926",
+        "https": "http://127.0.0.1:51926",
+    }
+    # Simulate an active registry/system proxy pointing to an unroutable port
+    monkeypatch.setattr("urllib.request.getproxies", lambda: fake_proxy)
+    monkeypatch.setattr("requests.compat.getproxies", lambda: fake_proxy)
+    monkeypatch.setattr("requests.utils.getproxies", lambda: fake_proxy)
+
+    # First verify that without no_inherited_proxy,
+    # requests.sessions.resolve_proxies would indeed pick up the proxy.
+    req = requests.Request(
+        "GET", f"http://{HOSTNAME}:{validated_server.port}/payload"
+    ).prepare()
+    unpatched_proxies = requests.sessions.resolve_proxies(  # type: ignore[attr-defined]
+        req, None, trust_env=True
+    )
+    assert "http" in unpatched_proxies
+
+    # Now apply proxy neutralization
+    _neutralize_inherited_proxies(monkeypatch)
+
+    # Now resolve_proxies must be empty and safe_get must succeed without ProxyError
+    neutralized_proxies = requests.sessions.resolve_proxies(  # type: ignore[attr-defined]
+        req, None, trust_env=True
+    )
+    assert neutralized_proxies == {}
+
+    real_getaddrinfo = socket.getaddrinfo
+
+    def fake_getaddrinfo(host, port, *args, **kwargs):  # type: ignore[no-untyped-def]
+        if _is_ip_literal(host):
+            return real_getaddrinfo(host, port, *args, **kwargs)
+        return [
+            (
+                socket.AF_INET,
+                socket.SOCK_STREAM,
+                6,
+                "",
+                ("127.0.0.1", validated_server.port),
+            )
+        ]
+
+    with patch("socket.getaddrinfo", side_effect=fake_getaddrinfo):
+        with patch("composio.utils.url_safety.is_blocked_ip", return_value=False):
+            response = safe_get(
+                f"http://{HOSTNAME}:{validated_server.port}/payload", timeout=(5, 5)
+            )
+
+    assert response.content == b"public payload"
+    assert len(validated_server.hits) == 1
+
