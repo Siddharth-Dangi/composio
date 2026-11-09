@@ -41,6 +41,11 @@ describe('CLI: composio proxy', () => {
 
   it('normalizes HTTP methods', () => {
     expect(normalizeProxyMethod('post')).toBe('POST');
+    expect(normalizeProxyMethod('head')).toBe('HEAD');
+    expect(normalizeProxyMethod('HEAD')).toBe('HEAD');
+    expect(() => normalizeProxyMethod('OPTIONS')).toThrow(
+      'Unsupported method. Use one of GET, POST, PUT, DELETE, PATCH, HEAD.'
+    );
   });
 
   it('parses JSON-like request bodies when possible', () => {

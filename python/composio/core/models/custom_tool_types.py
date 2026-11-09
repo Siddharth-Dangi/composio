@@ -16,6 +16,9 @@ from composio_client.types.tool_router import (
 from composio_client.types.tool_router.session_execute_response import (
     SessionExecuteResponse,
 )
+from composio_client.types.tool_router.session_proxy_execute_params import (
+    BinaryBody,
+)
 from pydantic import BaseModel
 
 from composio.utils.safe_path import SAFE_COMPONENT_REGEX
@@ -171,8 +174,9 @@ class SessionContext(te.Protocol):
         *,
         toolkit: str,
         endpoint: str,
-        method: t.Literal["GET", "POST", "PUT", "DELETE", "PATCH"],
+        method: t.Literal["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD"],
         body: t.Any = None,
+        binary_body: t.Optional[t.Union[BinaryBody, t.Dict[str, t.Any]]] = None,
         parameters: t.Optional[t.List[t.Dict[str, t.Any]]] = None,
     ) -> ToolRouterSessionProxyExecuteResponse:
         """Proxy API calls through Composio's auth layer.

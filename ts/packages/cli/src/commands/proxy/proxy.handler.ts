@@ -37,7 +37,7 @@ export type ProxyParams = {
 
 type ProxyMethod = Extract<
   SessionProxyExecuteParams['method'],
-  'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
+  'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD'
 >;
 
 const SUPPORTED_PROXY_METHODS: ReadonlyArray<ProxyMethod> = [
@@ -46,13 +46,14 @@ const SUPPORTED_PROXY_METHODS: ReadonlyArray<ProxyMethod> = [
   'PUT',
   'DELETE',
   'PATCH',
+  'HEAD',
 ];
 
 export const normalizeProxyMethod = (value: string): ProxyMethod => {
   const normalized = value.trim().toUpperCase();
   const supported = SUPPORTED_PROXY_METHODS.find(method => method === normalized);
   if (!supported) {
-    throw new Error('Unsupported method. Use one of GET, POST, PUT, DELETE, PATCH.');
+    throw new Error('Unsupported method. Use one of GET, POST, PUT, DELETE, PATCH, HEAD.');
   }
   return supported;
 };
