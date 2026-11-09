@@ -21,6 +21,24 @@ export function transformProxyParams(params: SessionProxyExecuteParams): ClientP
     endpoint: params.endpoint,
     method: params.method,
     ...(params.body !== undefined ? { body: params.body } : {}),
+    ...(params.binaryBody !== undefined
+      ? {
+          binary_body:
+            'url' in params.binaryBody
+              ? {
+                  url: params.binaryBody.url,
+                  ...(params.binaryBody.contentType !== undefined
+                    ? { content_type: params.binaryBody.contentType }
+                    : {}),
+                }
+              : {
+                  base64: params.binaryBody.base64,
+                  ...(params.binaryBody.contentType !== undefined
+                    ? { content_type: params.binaryBody.contentType }
+                    : {}),
+                },
+        }
+      : {}),
     ...(parameters?.length ? { parameters } : {}),
   };
 }
