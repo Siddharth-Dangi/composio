@@ -76,6 +76,9 @@ from composio.core.provider import TTool, TToolCollection
 from composio.core.provider.base import BaseProvider
 
 if t.TYPE_CHECKING:
+    from composio_client.types.tool_router.session_proxy_execute_params import (
+        BinaryBody,
+    )
     from composio.core.models.tool_router import (
         ToolkitConnectionsDetails,
         ToolRouterMCPServerConfig,
@@ -1239,8 +1242,9 @@ class ToolRouterSession(t.Generic[TTool, TToolCollection]):
         *,
         toolkit: str,
         endpoint: str,
-        method: t.Literal["GET", "POST", "PUT", "DELETE", "PATCH"],
+        method: t.Literal["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD"],
         body: t.Any = None,
+        binary_body: t.Optional[t.Union[BinaryBody, t.Dict[str, t.Any]]] = None,
         parameters: t.Optional[t.List[t.Dict[str, t.Any]]] = None,
     ) -> ToolRouterSessionProxyExecuteResponse:
         """Proxy an API call through Composio's auth layer.
@@ -1249,6 +1253,7 @@ class ToolRouterSession(t.Generic[TTool, TToolCollection]):
         :param endpoint: API endpoint URL
         :param method: HTTP method
         :param body: Request body (for POST, PUT, PATCH)
+        :param binary_body: Optional binary body descriptor (url or base64)
         :param parameters: Query/header parameters
         :returns: The proxied API response with ``result_type="completed"``,
             or ``result_type="blocked"`` with the hook's ``message`` when a
@@ -1263,6 +1268,7 @@ class ToolRouterSession(t.Generic[TTool, TToolCollection]):
             endpoint=endpoint,
             method=method,
             body=body,
+            binary_body=binary_body,
             parameters=parameters,
         )
 

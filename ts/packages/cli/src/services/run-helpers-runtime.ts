@@ -102,7 +102,7 @@ const proxySchema = {
       type: 'object',
       additionalProperties: true,
       properties: {
-        method: { type: 'string', enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] },
+        method: { type: 'string', enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD'] },
         headers: { description: 'Standard fetch headers init' },
         body: { description: 'String, JSON-ish value, Blob, ArrayBuffer, or Uint8Array' },
       },
@@ -301,8 +301,8 @@ const normalizeFetchInput = async (input: unknown, init: RequestInit = {}) => {
     throw new Error('proxy fetch requires a non-empty URL string or URL object.');
   }
   const method = typeof init.method === 'string' ? init.method.toUpperCase() : 'GET';
-  if (!['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-    throw new Error('proxy fetch only supports GET, POST, PUT, DELETE, PATCH.');
+  if (!['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD'].includes(method)) {
+    throw new Error('proxy fetch only supports GET, POST, PUT, DELETE, PATCH, HEAD.');
   }
   return {
     endpoint: endpoint.trim(),

@@ -1059,15 +1059,29 @@ export interface ToolRouterSessionMetadata {
   inlineCustomToolsPayload?: InlineCustomToolsWirePayload;
 }
 
+export const SessionProxyExecuteBinaryBodySchema = z.union([
+  z.object({
+    url: z.string(),
+    contentType: z.string().optional(),
+  }),
+  z.object({
+    base64: z.string(),
+    contentType: z.string().optional(),
+  }),
+]);
+export type SessionProxyExecuteBinaryBody = z.infer<typeof SessionProxyExecuteBinaryBodySchema>;
+
 export const SessionProxyExecuteParamsSchema = z.object({
   /** The toolkit whose connected account to use for auth (e.g. 'gmail', 'github') */
   toolkit: z.string(),
   /** The API endpoint URL to call */
   endpoint: z.string(),
   /** HTTP method */
-  method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH']),
+  method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD']),
   /** Request body (for POST/PUT/PATCH) */
   body: z.unknown().optional(),
+  /** Binary body to send (URL or base64) */
+  binaryBody: SessionProxyExecuteBinaryBodySchema.optional(),
   /** Query params or headers to include */
   parameters: z
     .array(

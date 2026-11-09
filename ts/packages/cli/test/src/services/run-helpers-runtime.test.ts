@@ -243,6 +243,52 @@ describe('run-helpers-runtime', () => {
     await expect(response.json()).resolves.toEqual({ id: 1 });
   });
 
+  it('[Given] proxy fetch with HEAD method [Then] it sends HEAD method successfully', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ session_id: 'session-1' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: 200, data: {} }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        })
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await installRunHelpers({
+      cliPrefix: ['composio'],
+      helperContext: {
+        apiKey: 'test-key',
+        orgId: 'test-org',
+        consumerProjectId: 'test-project',
+        consumerUserId: 'test-user',
+      },
+    });
+
+    const installedGlobals: unknown = globalThis;
+    assert(
+      Predicate.hasProperty(installedGlobals, 'proxy') &&
+        typeof installedGlobals.proxy === 'function',
+      'installRunHelpers() did not install proxy().'
+    );
+
+    const proxyFetch = await installedGlobals.proxy('github');
+    const response: Response = await proxyFetch('https://api.github.com/user', {
+      method: 'HEAD',
+    });
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [, proxyCallInit] = fetchMock.mock.calls[1] as [string, RequestInit];
+    const proxyPayload = JSON.parse(proxyCallInit.body as string) as { method: string };
+    expect(proxyPayload.method).toBe('HEAD');
+  });
+
   it('[Given] a proxy binary URL targets cloud metadata [Then] it blocks the download', async () => {
     const fetchMock = vi
       .fn()

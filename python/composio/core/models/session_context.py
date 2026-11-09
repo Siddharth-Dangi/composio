@@ -12,7 +12,10 @@ from composio_client import omit
 from composio_client.types.tool_router.session_execute_response import (
     SessionExecuteResponse,
 )
-from composio_client.types.tool_router.session_proxy_execute_params import Parameter
+from composio_client.types.tool_router.session_proxy_execute_params import (
+    BinaryBody,
+    Parameter,
+)
 from composio_client.types.tool_router.session_proxy_execute_response import (
     SessionProxyExecuteBlockedResponse,
 )
@@ -38,7 +41,7 @@ from composio.core.models.tools import (
 )
 from composio.exceptions import ValidationError
 
-_VALID_METHODS = frozenset({"GET", "POST", "PUT", "DELETE", "PATCH"})
+_VALID_METHODS = frozenset({"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD"})
 _VALID_PARAM_TYPES = frozenset({"header", "query"})
 
 
@@ -48,8 +51,9 @@ def proxy_execute_impl(
     *,
     toolkit: str,
     endpoint: str,
-    method: t.Literal["GET", "POST", "PUT", "DELETE", "PATCH"],
+    method: t.Literal["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD"],
     body: t.Any = None,
+    binary_body: t.Optional[t.Union[BinaryBody, t.Dict[str, t.Any]]] = None,
     parameters: t.Optional[t.List[t.Dict[str, t.Any]]] = None,
 ) -> ToolRouterSessionProxyExecuteResponse:
     """Shared proxy execute implementation used by SessionContextImpl and ToolRouterSession.
@@ -98,6 +102,9 @@ def proxy_execute_impl(
         endpoint=endpoint,
         method=method,
         body=body if body is not None else omit,
+        binary_body=t.cast(BinaryBody, binary_body)
+        if binary_body is not None
+        else omit,
         parameters=api_params if api_params else omit,
     )
 
@@ -215,8 +222,9 @@ class SessionContextImpl:
         *,
         toolkit: str,
         endpoint: str,
-        method: t.Literal["GET", "POST", "PUT", "DELETE", "PATCH"],
+        method: t.Literal["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD"],
         body: t.Any = None,
+        binary_body: t.Optional[t.Union[BinaryBody, t.Dict[str, t.Any]]] = None,
         parameters: t.Optional[t.List[t.Dict[str, t.Any]]] = None,
     ) -> ToolRouterSessionProxyExecuteResponse:
         """Proxy API calls through Composio's auth layer.
@@ -230,5 +238,6 @@ class SessionContextImpl:
             endpoint=endpoint,
             method=method,
             body=body,
+            binary_body=binary_body,
             parameters=parameters,
         )

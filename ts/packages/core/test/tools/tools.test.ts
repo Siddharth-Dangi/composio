@@ -1327,6 +1327,68 @@ describe('Tools', () => {
       expect(result).toEqual(expectedProxyResponse);
     });
 
+    it('should handle proxy request with method HEAD', async () => {
+      const expectedProxyResponse = { data: {}, status: 200, headers: { 'content-length': '100' } };
+      mockClient.tools.proxy.mockResolvedValueOnce(expectedProxyResponse);
+
+      const proxyParams = {
+        endpoint: '/api/resource',
+        method: 'HEAD' as const,
+        connectedAccountId: 'test-account-id',
+      };
+
+      const result = await context.tools.proxyExecute(proxyParams);
+
+      expect(mockClient.tools.proxy).toHaveBeenCalledWith(
+        {
+          endpoint: '/api/resource',
+          method: 'HEAD',
+          body: undefined,
+          connected_account_id: 'test-account-id',
+          user_id: undefined,
+          parameters: [],
+          custom_connection_data: undefined,
+        },
+        { maxRetries: 0 }
+      );
+      expect(result).toEqual(expectedProxyResponse);
+    });
+
+    it('should handle proxy request with binaryBody', async () => {
+      const expectedProxyResponse = { data: { success: true }, status: 200 };
+      mockClient.tools.proxy.mockResolvedValueOnce(expectedProxyResponse);
+
+      const proxyParams = {
+        endpoint: '/api/upload',
+        method: 'POST' as const,
+        binaryBody: {
+          url: 'https://example.com/file.png',
+          contentType: 'image/png',
+        },
+        connectedAccountId: 'test-account-id',
+      };
+
+      const result = await context.tools.proxyExecute(proxyParams);
+
+      expect(mockClient.tools.proxy).toHaveBeenCalledWith(
+        {
+          endpoint: '/api/upload',
+          method: 'POST',
+          body: undefined,
+          binary_body: {
+            url: 'https://example.com/file.png',
+            content_type: 'image/png',
+          },
+          connected_account_id: 'test-account-id',
+          user_id: undefined,
+          parameters: [],
+          custom_connection_data: undefined,
+        },
+        { maxRetries: 0 }
+      );
+      expect(result).toEqual(expectedProxyResponse);
+    });
+
     it('should throw validation error for invalid parameters', async () => {
       const invalidProxyParams = {
         endpoint: '/api/test',

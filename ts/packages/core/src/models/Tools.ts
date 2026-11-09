@@ -1431,9 +1431,27 @@ export class Tools<
       connected_account_id: toolProxyParams.data.connectedAccountId,
       user_id: toolProxyParams.data.userId,
       parameters: parameters,
+      ...(toolProxyParams.data.binaryBody !== undefined
+        ? {
+            binary_body:
+              'url' in toolProxyParams.data.binaryBody
+                ? {
+                    url: toolProxyParams.data.binaryBody.url,
+                    ...(toolProxyParams.data.binaryBody.contentType !== undefined
+                      ? { content_type: toolProxyParams.data.binaryBody.contentType }
+                      : {}),
+                  }
+                : {
+                    base64: toolProxyParams.data.binaryBody.base64,
+                    ...(toolProxyParams.data.binaryBody.contentType !== undefined
+                      ? { content_type: toolProxyParams.data.binaryBody.contentType }
+                      : {}),
+                  },
+          }
+        : {}),
       /**
        * @deprecated The `customConnectionData` proxy param is deprecated and will be
-       * removed in a future release. Use `customAuthParams` instead.
+       * removed in a future release.
        */
       custom_connection_data: toolProxyParams.data.customConnectionData,
     } as ComposioToolProxyParams;

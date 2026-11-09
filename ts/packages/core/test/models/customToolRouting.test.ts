@@ -525,6 +525,40 @@ describe('ToolRouterSession execution routing', () => {
         headers: { 'x-test': '1' },
       });
     });
+
+    it('should support HEAD method and binaryBody', async () => {
+      const session = createSession(mockClient, [customToolHandle]);
+
+      const result = await session.proxyExecute({
+        toolkit: 'github',
+        endpoint: 'https://api.github.com/user',
+        method: 'HEAD',
+        binaryBody: {
+          url: 'https://example.com/file.bin',
+          contentType: 'application/octet-stream',
+        },
+      });
+
+      expect(mockClient.toolRouter.session.proxyExecute).toHaveBeenCalledWith(
+        'sess_123',
+        {
+          toolkit_slug: 'github',
+          endpoint: 'https://api.github.com/user',
+          method: 'HEAD',
+          binary_body: {
+            url: 'https://example.com/file.bin',
+            content_type: 'application/octet-stream',
+          },
+        },
+        { maxRetries: 0 }
+      );
+      expect(result).toEqual({
+        resultType: 'completed',
+        status: 200,
+        data: { ok: true },
+        headers: { 'x-test': '1' },
+      });
+    });
   });
 
   describe('session.execute() — SessionContext injection', () => {
