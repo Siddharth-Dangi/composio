@@ -14,7 +14,6 @@ import { ConfigProvider, Effect } from 'effect';
 import { forRunner, runInvocation } from 'src/invocation/invocation';
 import { InvocationLive } from 'src/invocation/live';
 import { readTelemetryDebugOverride, telemetryDebugModeLayer } from 'src/services/runtime-flags';
-import { normalizeRunScriptArgs } from 'src/commands/argv-compat';
 import { makeShutdownController, ShutdownSignal } from 'src/services/shutdown-signal';
 import { makeCliRunMain } from 'src/run-main';
 
@@ -27,7 +26,7 @@ export type CliBootstrapOptions = {
 };
 
 export const runCli = (options: CliBootstrapOptions): void => {
-  const debug = readTelemetryDebugOverride(normalizeRunScriptArgs(options.argv));
+  const debug = readTelemetryDebugOverride(options.argv);
   // One per invocation: the runner reports the process's signals to the command through it.
   const shutdown = makeShutdownController();
   runInvocation(options.argv).pipe(

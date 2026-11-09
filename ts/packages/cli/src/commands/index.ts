@@ -45,7 +45,6 @@ import { CLI_EXPERIMENTAL_FEATURES } from 'src/constants';
 import { experimental, type CommandVisibility, tagged, visibleValues } from './feature-tags';
 import { withRegisteredSubcommands } from './registration';
 import { debugCmd } from './debug/debug.cmd';
-import { normalizeListenStreamFlag, normalizeRunScriptArgs } from './argv-compat';
 import { configureCliAnalyticsReleaseVersion } from 'src/analytics/events';
 import { CommandSurface } from './surface';
 
@@ -171,9 +170,9 @@ export const runWithConfig = Effect.gen(function* () {
       : runWithDecorationOnStderr(args);
 
   return (argv: ReadonlyArray<string>) => {
-    const parsedArgv = normalizeRunScriptArgs(normalizeListenStreamFlag(argv));
-    return runCli(parsedArgv.slice(2)).pipe(
-      Effect.provideService(ExecuteInvocationArgs, parsedArgv.slice(2)),
+    const args = argv.slice(2);
+    return runCli(args).pipe(
+      Effect.provideService(ExecuteInvocationArgs, args),
       Effect.provide(cliDebugFlagsLayer())
     );
   };
