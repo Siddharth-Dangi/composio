@@ -1,6 +1,5 @@
 import { telemetry, withCommandTelemetry } from 'src/analytics/command-input';
 import { Argument, Command, Flag } from 'effect/cli';
-import { CLI_DEBUG_FLAG_NAMES } from 'src/services/runtime-flags';
 import { runScript } from './run.handler';
 
 const RUN_FLAG_NAMES = {
@@ -47,20 +46,6 @@ const runFlags = {
   skipToolParamsCheck,
   skipChecks,
 };
-
-/** Share names with the passthrough adapter; the framework owns parsing the flag values. */
-export const RUN_FILE_FLAGS = new Set([`--${RUN_FLAG_NAMES.file}`, '-f']);
-export const RUN_KNOWN_VALUE_FLAGS = new Set([...RUN_FILE_FLAGS, '--log-level']);
-export const RUN_KNOWN_BOOLEAN_FLAGS = new Set([
-  ...Object.values(RUN_FLAG_NAMES)
-    .filter(name => name !== RUN_FLAG_NAMES.file)
-    .map(name => `--${name}`),
-  ...CLI_DEBUG_FLAG_NAMES.flatMap(name => [`--${name}`, `--no-${name}`]),
-  '--help',
-  '-h',
-  '--version',
-  '-v',
-]);
 
 const args = Argument.String('arg').pipe(
   Argument.variadic(),
@@ -112,7 +97,11 @@ const runCmdBase = Command.make(
     },
     {
       command: 'composio run --file ./workflow.ts -- --repo acme/app',
-      description: 'Run from a file',
+      description: 'Run from a file with forwarded arguments',
+    },
+    {
+      command: "composio run -- 'console.log(process.argv)' --repo acme/app",
+      description: 'Run inline code with forwarded arguments',
     },
   ])
 );

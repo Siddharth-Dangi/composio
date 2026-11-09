@@ -12,6 +12,18 @@
 
 ### Minor Changes
 
+- Remove legacy argv compatibility normalization (`#5189`). Effect CLI now parses
+  command syntax natively without pre-rewriting argv:
+  - `composio listen --stream` requires an explicit string value: pass `''` to stream
+    the full event payload (e.g. `composio listen <slug> --stream ''`), or a path expression
+    (e.g. `--stream '.data.threadId'`). A bare `--stream` now fails with a missing-value error.
+  - `composio run` requires an explicit `--` delimiter to forward flag-shaped script
+    arguments. Use `composio run -- 'console.log(process.argv)' --repo acme` for inline
+    code or `composio run --file ./workflow.ts -- --repo acme` for a file. Script flags
+    placed after the separator are forwarded directly to the script tail and do not activate
+    CLI debug, help, or telemetry flags. Without `--`, flag-shaped arguments are parsed as
+    CLI options and rejected if unrecognized.
+
 - A signal now ends each command the way its work ends. A one-shot command,
   `composio login` and `composio upgrade` stopped with Ctrl-C (SIGINT), SIGTERM
   or a closed terminal (SIGHUP) exit 130, 143 or 129. They used to exit 0, so a

@@ -367,7 +367,9 @@ describe('CLI: composio run', () => {
         Effect.gen(function* () {
           commandRuns.mockImplementation(() => Effect.succeed(ChildProcessSpawner.ExitCode(7)));
 
-          const exit = yield* Effect.exit(cli(['run', 'console.log("hi")', '--flag', 'value']));
+          const exit = yield* Effect.exit(
+            cli(['run', '--', 'console.log("hi")', '--flag', 'value'])
+          );
           const output = yield* MockConsole.getLines();
 
           // The process exits with the child's code.
@@ -735,7 +737,6 @@ describe('CLI: composio run', () => {
 
   layer(RunTestLive())(it => {
     it.effect.each([
-      { layout: 'no delimiter', args: [SCRIPT, ...SCRIPT_FLAGS] },
       { layout: 'a delimiter after the code', args: [SCRIPT, '--', ...SCRIPT_FLAGS] },
       { layout: 'a delimiter before the code', args: ['--', SCRIPT, ...SCRIPT_FLAGS] },
     ])('forwards script flags with $layout without enabling them in the CLI', ({ args }) =>
@@ -751,6 +752,59 @@ describe('CLI: composio run', () => {
           COMPOSIO_CLI_TELEMETRY_DEBUG: '0',
         });
       })
+    );
+
+    it.effect(
+      '[Given] positional script arguments without a delimiter [Then] it forwards them to the script',
+      () =>
+        Effect.gen(function* () {
+          yield* cli(['run', SCRIPT, 'alpha', 'beta']);
+
+          expect(commandRuns).toHaveBeenCalledTimes(1);
+          const spawned = inspectRunCommand(commandRuns.mock.calls[0]![0]);
+          expect(spawned.cmd.slice(5)).toEqual(['--', 'alpha', 'beta']);
+        })
+    );
+
+    it.effect(
+      '[Given] flag-shaped script arguments without a delimiter [Then] the CLI rejects them as unknown options',
+      () =>
+        Effect.gen(function* () {
+          const failure = yield* cli(['run', SCRIPT, '--unknown-flag']).pipe(Effect.flip);
+
+          expect(failure).toMatchObject({
+            _tag: 'ShowHelp',
+            errors: [
+              expect.objectContaining({
+                _tag: 'UnrecognizedOption',
+                option: '--unknown-flag',
+              }),
+            ],
+          });
+          expect(commandRuns).not.toHaveBeenCalled();
+        })
+    );
+
+    it.effect(
+      '[Given] a script file with flag-shaped script arguments without a delimiter [Then] the CLI rejects them',
+      () =>
+        Effect.gen(function* () {
+          const { scriptPath } = yield* tempScript;
+          const failure = yield* cli(['run', '--file', scriptPath, '--repo', 'acme']).pipe(
+            Effect.flip
+          );
+
+          expect(failure).toMatchObject({
+            _tag: 'ShowHelp',
+            errors: [
+              expect.objectContaining({
+                _tag: 'UnrecognizedOption',
+                option: '--repo',
+              }),
+            ],
+          });
+          expect(commandRuns).not.toHaveBeenCalled();
+        })
     );
   });
 
