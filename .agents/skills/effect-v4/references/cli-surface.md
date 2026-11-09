@@ -66,7 +66,7 @@ export const ComposioCliConfig = {
 
 `Command.runWith(rootCommand, { version })` receives argv without the executable and script prefix. `runInvocation` receives full argv. `runWithConfig` removes the first two entries immediately before dispatch.
 
-Compatibility normalization in `src/commands/argv-compat.ts` handles script tails for `run` and bare `listen --stream`. Effect still owns parsing. New command behavior does not need another argv parser.
+Effect parses command arguments and options natively. Forwarding flag-shaped script arguments to `run` requires an explicit `--` separator, and `listen --stream` requires an explicit string value (`''` for the full payload). New command behavior does not need another argv parser.
 
 `Command.runWith` renders help and parse failures before failing with `CliError.ShowHelp`. Explicit help and version use stdout. Implicit command help and errors use stderr. A parse failure has an exit code of 1 and records the canonical command path with reason `parse_error`. Help, version, parse failures, and groups that only show help skip selected-command hooks.
 

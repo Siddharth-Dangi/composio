@@ -188,7 +188,7 @@ describe('CLI: composio listen', () => {
       })
     );
 
-    it.effect('[Then] a bare --stream flag prints the whole event payload inline', () =>
+    it.effect("[Then] --stream '' prints the whole event payload inline", () =>
       Effect.gen(function* () {
         yield* enableListen;
         yield* cli([
@@ -197,6 +197,7 @@ describe('CLI: composio listen', () => {
           '--max-events',
           '1',
           '--stream',
+          '',
         ]);
 
         const lines = yield* MockConsole.getLines({ stripAnsi: true });
@@ -208,22 +209,24 @@ describe('CLI: composio listen', () => {
       })
     );
 
-    it.effect('[Then] a bare --stream flag followed by another option is not swallowed', () =>
+    it.effect('[Then] a bare --stream flag produces the missing-value error', () =>
       Effect.gen(function* () {
         yield* enableListen;
-        yield* cli([
+        const failure = yield* cli([
           'listen',
           'composio.connected_account.expired',
           '--stream',
-          '--max-events',
-          '1',
-        ]);
+        ]).pipe(Effect.flip);
 
-        const lines = yield* MockConsole.getLines({ stripAnsi: true });
-        const output = lines.join('\n');
-
-        expect(output).toContain('stream: ');
-        expect(output).toContain('Stopped after receiving 1 event.');
+        expect(failure).toMatchObject({
+          _tag: 'ShowHelp',
+          errors: [
+            expect.objectContaining({
+              _tag: 'InvalidValue',
+              option: 'stream',
+            }),
+          ],
+        });
       })
     );
   });
@@ -299,6 +302,7 @@ describe('CLI: composio listen', () => {
             '--max-events',
             '1',
             '--stream',
+            '',
           ]).pipe(Effect.provide(terminal.layer));
 
           const lines = terminal.stdout().slice(0, -1).split('\n');

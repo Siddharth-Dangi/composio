@@ -28,7 +28,7 @@ const timeout = Flag.String('timeout').pipe(
 
 const stream = Flag.String('stream').pipe(
   Flag.withDescription(
-    'Also stream each event payload inline. Pass an optional jq-like path such as ".thread.id" or ".data[0].id".'
+    'Also stream each event payload inline. Pass \'\' to stream the full payload, or a jq-like path such as ".thread.id" or ".data[0].id".'
   ),
   Flag.optional
 );
@@ -80,7 +80,7 @@ export const listenCmd = Command.make(
         'composio listen SLACK_CHANNEL_MESSAGE_RECEIVED -p \'{ trigger_config: { channel_id: "C123" } }\'',
     },
     {
-      command: 'composio listen GMAIL_NEW_GMAIL_MESSAGE -p @trigger.json --stream',
+      command: "composio listen GMAIL_NEW_GMAIL_MESSAGE -p @trigger.json --stream ''",
     },
     {
       command: "composio listen GMAIL_NEW_GMAIL_MESSAGE -p @trigger.json --stream '.data.threadId'",
